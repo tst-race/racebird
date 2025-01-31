@@ -1,0 +1,112 @@
+{
+    "plugins": [
+        {
+            "file_path": "PluginRacebird",
+            "plugin_type": "comms",
+            "file_type": "shared_library",
+            "node_type": "any",
+            "shared_library_path": "libPluginRacebird.so",
+            "channels": ["obfs4"]
+        }
+    ],
+    "channel_properties": {
+        "obfs4": {
+            "bootstrap": false,
+            "channelGid": "obfs4",
+            "connectionType": "CT_DIRECT",
+            "creatorExpected": {
+                "send": {
+                    "bandwidth_bps": 14000000,
+                    "latency_ms": 20000,
+                    "loss": 0.001
+                },
+                "receive": {
+                    "bandwidth_bps": 14000000,
+                    "latency_ms": 20000,
+                    "loss": 0.001
+                }
+            },
+            "description": "A wrapper for the Obfs4 transport provided by Lyrebird",
+            "duration_s": -1,
+            "linkDirection": "LD_BIDI",
+            "loaderExpected": {
+                "send": {
+                    "bandwidth_bps": 14000000,
+                    "latency_ms": 20000,
+                    "loss": 0.001
+                },
+                "receive": {
+                    "bandwidth_bps": 14000000,
+                    "latency_ms": 20000,
+                    "loss": 0.001
+                }
+            },
+            "currentRole": "CR_BOTH",
+            "roles": [
+                {
+                    "roleName": "default",
+                    "mechanicalTags": [],
+                    "behavioralTags": [],
+                    "linkSide": "LS_BOTH"
+                }
+            ],
+            "maxLinks": 65500,
+            "maxLoadersPerCreator": 65500,
+            "maxCreatorsPerLoader": 65500,
+            "creatorsPerLoader": -1,
+            "loadersPerCreator": -1,
+            "mtu": -1,
+            "multiAddressable": false,
+            "period_s": -1,
+            "reliable": false,
+            "isFlushable": false,
+            "sendType": "ST_EPHEM_SYNC",
+            "supported_hints": [],
+            "transmissionType": "TT_UNICAST",
+            "maxSendsPerInterval": -1,
+            "secondsPerInterval": -1,
+            "intervalEndTime": 0,
+            "sendsRemainingInInterval": -1
+        }
+    },
+    "channel_parameters": [
+        {
+            "key": "hostname",
+            "plugin": "PluginRacebird",
+            "required": false,
+            "type": "string",
+            "default": ""
+        },
+        {
+            "key": "private-key",
+            "plugin": "PluginRacebird",
+            "required": false,
+            "type": "string"
+        },
+        {
+            "key": "node-id",
+            "plugin": "PluginRacebird",
+            "required": false,
+            "type": "string"
+        },
+        {
+            "key": "drbg-seed",
+            "plugin": "PluginRacebird",
+            "required": false,
+            "type": "string"
+        },
+        {
+            "key": "iat-mode",
+            "plugin": "PluginRacebird",
+            "required": false,
+            "type": "string"
+        },
+        {
+            "key": "start-port",
+            "plugin": "PluginRacebird",
+            "required": false,
+            "type": "int",
+            "default": 31002
+        }        
+    ] 
+}
