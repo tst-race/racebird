@@ -29,7 +29,6 @@ if("${BUILD_VERSION}" STREQUAL "")
 endif()
 
 add_subdirectory(source)
-add_subdirectory(config-utils)
 
 # if(NOT ANDROID)
 #     enable_testing()
