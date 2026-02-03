@@ -251,7 +251,7 @@ type LinkPropJson struct {
 	Expected        LinkPropPairJson `json:"expected"`
 	Unicast         bool             `json:"unicast"`
 	Multicast       bool             `json:"multicast"`
-	Supported_hints []string         `json:"supported_hints"`
+	SupportedHints  []string         `json:"supportedHints"`
 }
 
 // Unmarshal the data object into a LinkPropJson
@@ -470,9 +470,8 @@ func (plugin *RacebirdPlugin) OpenConnection(handle uint64, linkType commsShims.
 
 			// Update the SDK about the connection being open
 			// Start a listener (in a new goroutine) if the Link Type allows receipt of messages
-			if linkType == commsShims.LT_RECV || linkType == commsShims.LT_BIDI {
-				go plugin.connectionMonitor(&obfsConn, newConnectionId)
-			}
+			// if linkType == commsShims.LT_RECV || linkType == commsShims.LT_BIDI {
+			go plugin.connectionMonitor(&obfsConn, newConnectionId)
 
 			logDebug("Calling OnConnectionStatusChanged: ",
 				handle, " ",
@@ -486,9 +485,9 @@ func (plugin *RacebirdPlugin) OpenConnection(handle uint64, linkType commsShims.
 	}
 
 	// Start a listener (in a new goroutine) if the Link Type allows receipt of messages
-	if linkType == commsShims.LT_RECV || linkType == commsShims.LT_BIDI {
+	// if linkType == commsShims.LT_RECV || linkType == commsShims.LT_BIDI {
 		go plugin.connectionMonitor(&obfsConn, newConnectionId)
-	}
+	// }
 
 	logDebug("Calling OnConnectionStatusChanged: ",
 		handle, " ",
@@ -685,7 +684,7 @@ func (plugin *RacebirdPlugin) getDefaultLinkProperties() commsShims.LinkProperti
 	props.SetWorst(channelProps.GetCreatorExpected())
 	props.SetExpected(channelProps.GetCreatorExpected())
 	props.SetBest(channelProps.GetCreatorExpected())
-	props.SetSupported_hints(channelProps.GetSupported_hints())
+	props.SetSupportedHints(channelProps.GetSupportedHints())
 	props.SetChannelGid(CHANNEL_GID)
 	return props
 }

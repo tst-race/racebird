@@ -53,11 +53,11 @@ FILEPATH="$(pwd)"
 RACE_CONTAINER_REGISTRY="ghcr.io"
 RACE_GITHUB_GROUP="tst-race"
 RACE_COMPILE_IMAGE_REPO="raceboat"
-RACE_COMPILE_IMAGE_NAME="raceboat-compile"
+RACE_COMPILE_IMAGE_NAME="raceboat-plugin-builder"
 LOCAL=false
 
 # Version values
-RACE_VERSION="2.6.0"
+RACE_VERSION="supported-hints-cleanup"
 
 COMMAND="./build_artifacts.sh"
 
@@ -206,7 +206,8 @@ if [ "${LOCAL}" = true ]; then
     RACE_COMPILE_IMAGE="raceboat-compile"
 else
     RACE_COMPILE_IMAGE="${RACE_CONTAINER_REGISTRY}/${RACE_GITHUB_GROUP}/${RACE_COMPILE_IMAGE_REPO}/${RACE_COMPILE_IMAGE_NAME}:${RACE_VERSION}"
-    docker pull "${RACE_COMPILE_IMAGE}"
+    echo $RACE_COMPILE_IMAGE
+    # docker pull "${RACE_COMPILE_IMAGE}"
 fi
 
 formatlog "INFO" "Using image ${RACE_COMPILE_IMAGE}"
