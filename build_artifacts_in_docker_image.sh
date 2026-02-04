@@ -57,7 +57,7 @@ RACE_COMPILE_IMAGE_NAME="raceboat-plugin-builder"
 LOCAL=false
 
 # Version values
-RACE_VERSION="supported-hints-cleanup"
+RACE_VERSION="main"
 
 COMMAND="./build_artifacts.sh"
 

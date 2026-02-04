@@ -20,6 +20,8 @@ project(PluginRacebird)
 
 set(CMAKE_MODULE_PATH /opt/race/race-cmake-modules)
 
+set(ENV{GOFLAGS} "$ENV{GOFLAGS} -buildvcs=false")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Debug)
 
