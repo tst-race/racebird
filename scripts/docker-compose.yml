@@ -10,6 +10,7 @@ services:
     # Start race-cli and keep it running
     command: >
       race-cli -m --server-connect --debug
+      --logto /tmp/raceboat_server.log
       --dir /server-kits
       --recv-channel=obfs4
       --send-channel=obfs4
@@ -31,6 +32,7 @@ services:
         ipv4_address: 10.18.1.2
     command: >
       race-cli -m --client-connect --debug
+      --logto /tmp/raceboat_client.log
       --dir /client-kits
       --recv-channel=obfs4
       --send-channel=obfs4

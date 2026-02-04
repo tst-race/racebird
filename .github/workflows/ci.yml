@@ -1,0 +1,52 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*'] # Triggers release logic on version tags
+  pull_request:
+    branches: ['main']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-plugin:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/tst-race/raceboat/raceboat-plugin-builder:main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetches all history for better versioning
+
+      - name: Build
+        env:
+          GOFLAGS: "-buildvcs=false"
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          ./build_artifacts.sh
+
+      - name: Create Build Artifact
+        run: tar cvzf "${{ github.event.repository.name }}.tar.gz" -C "$GITHUB_WORKSPACE" ./kit
+
+      - name: Upload to Actions Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ github.event.repository.name }}-ci-build"
+          path: "${{ github.event.repository.name }}.tar.gz"
+          retention-days: 10
+
+      # NEW: Create a GitHub Release if a tag is pushed
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "${{ github.event.repository.name }}.tar.gz"
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
