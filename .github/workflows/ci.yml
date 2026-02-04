@@ -21,7 +21,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build
-        run: ./build_artifacts.sh
+        env:
+          # Disables VCS stamping to prevent exit status 128 in containerized builds
+          GOFLAGS: "-buildvcs=false"
+        run: |
+          # Marks the directory as safe for Git to prevent ownership errors
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          ./build_artifacts.sh
 
       - name: Create Build Artifact
         run: "tar cvf ${{ github.event.repository.name }}.tar.gz -C /__w/raceboat/raceboat/ ./kit"
