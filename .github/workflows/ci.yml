@@ -27,7 +27,7 @@ jobs:
         run: "tar cvf ${{ github.event.repository.name }}.tar.gz -C /__w/raceboat/raceboat/ ./kit"
 
       - name: Upload Build Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ github.event.repository.name }}.tar.gz"
           path: "${{ github.event.repository.name }}.tar.gz"
