@@ -2,7 +2,7 @@ name: Continuous Integration
 
 on:
   push:
-    branches: ['main']
+    branches: ['**']
     tags: ['v*'] # Triggers release logic on version tags
   pull_request:
     branches: ['main']
