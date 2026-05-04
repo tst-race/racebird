@@ -1,1 +1,7 @@
 build/*
+kit/*
+test/*-logs/*
+test/*-tmp/*
+test/kits/*
+=*
+*~

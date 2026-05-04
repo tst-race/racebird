@@ -25,9 +25,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/goptlib"
-	transports "gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/lyrebird/transports"
-	"gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/lyrebird/transports/base"
 	"io"
 	"io/ioutil"
 	"net"
@@ -38,6 +35,10 @@ import (
 	"strings"
 	"sync"
 	"unsafe"
+
+	pt "gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/goptlib"
+	transports "gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/lyrebird/transports"
+	"gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/lyrebird/transports/base"
 )
 
 const (
@@ -241,17 +242,17 @@ func NewLinkPropertyPair(json LinkPropPairJson) commsShims.LinkPropertyPair {
 // details about the link, properties (best/worst/expected cases), and what
 // type of link the link is
 type LinkPropJson struct {
-	Linktype        string           `json:"type"`
-	Reliable        bool             `json:"reliable"`
-	Duration_s      int              `json:"duration_s"`
-	Period_s        int              `json:"period_s"`
-	Mtu             int              `json:"mtu"`
-	Worst           LinkPropPairJson `json:"worst"`
-	Best            LinkPropPairJson `json:"best"`
-	Expected        LinkPropPairJson `json:"expected"`
-	Unicast         bool             `json:"unicast"`
-	Multicast       bool             `json:"multicast"`
-	SupportedHints  []string         `json:"supportedHints"`
+	Linktype       string           `json:"type"`
+	Reliable       bool             `json:"reliable"`
+	Duration_s     int              `json:"duration_s"`
+	Period_s       int              `json:"period_s"`
+	Mtu            int              `json:"mtu"`
+	Worst          LinkPropPairJson `json:"worst"`
+	Best           LinkPropPairJson `json:"best"`
+	Expected       LinkPropPairJson `json:"expected"`
+	Unicast        bool             `json:"unicast"`
+	Multicast      bool             `json:"multicast"`
+	SupportedHints []string         `json:"supportedHints"`
 }
 
 // Unmarshal the data object into a LinkPropJson
@@ -316,13 +317,13 @@ func (plugin *RacebirdPlugin) Shutdown() commsShims.PluginResponse {
 	for connectionId, _ := range plugin.connections {
 		plugin.CloseConnection(handle, connectionId)
 	}
-	
+
 	for linkId, _ := range plugin.linkAddresses {
 		plugin.DestroyLink(handle, linkId)
 	}
 
 	plugin.DeactivateChannel(handle, CHANNEL_GID)
-	
+
 	return commsShims.PLUGIN_OK
 }
 
@@ -417,9 +418,9 @@ func (plugin *RacebirdPlugin) OpenConnection(handle uint64, linkType commsShims.
 		// Handle created / server-side link
 		// Check if link already has a running listener socket
 		plugin.connectionsMutex.RLock()
-		logDebug(logPrefix, "checking existing socket")
+		logDebug(logPrefix, "checking existing socket for linkId: ", linkId)
 		if plugin.listenerSockets[linkId] == nil {
-			logDebug(logPrefix, "starting listen")
+			logDebug(logPrefix, "starting listen on ", linkAdress.Addr)
 			newListener, err := net.Listen(
 				CONN_TYPE,
 				linkAdress.Addr)
@@ -430,63 +431,70 @@ func (plugin *RacebirdPlugin) OpenConnection(handle uint64, linkType commsShims.
 					commsShims.CONNECTION_CLOSED,
 					commsShims.NewLinkProperties(),
 					commsShims.GetRACE_BLOCKING())
+				plugin.connectionsMutex.RUnlock()
 				return commsShims.PLUGIN_ERROR
 			}
-			logDebug(logPrefix, "appending listener")
+			logDebug(logPrefix, "appending listener for linkId: ", linkId)
 			plugin.listenerSockets[linkId] = &newListener
 		}
-		logDebug(logPrefix, "using existing listener")
+		logDebug(logPrefix, "using existing listener for linkId: ", linkId)
 		listener := plugin.listenerSockets[linkId]
 		plugin.connectionsMutex.RUnlock()
 
-		go func() {
-			// Launch an Accept thread and return
-			logDebug(logPrefix, "calling accept listener")
-			logDebug(logPrefix, "listener?", listener)
+		// CRITICAL: ALWAYS spawn a new goroutine for THIS specific openConnection call
+		// Each goroutine handles exactly one Accept() -> one client connection
+		// This enables proper TCP accept/listen semantics
+		go func(acceptHandle uint64, connectionId string, linkProps commsShims.LinkProperties) {
+			logDebug(logPrefix, "goroutine waiting on accept for handle: ", acceptHandle, " connectionId: ", connectionId)
+
+			// Block waiting for ONE client
 			conn, err := (*listener).Accept()
 			if err != nil {
-				logError("OpenConnection failed to accept: ", err)
-				plugin.sdk.OnConnectionStatusChanged(handle,
+				logError("OpenConnection failed to accept for handle ", acceptHandle, ": ", err)
+				plugin.sdk.OnConnectionStatusChanged(acceptHandle,
 					"",
 					commsShims.CONNECTION_CLOSED,
 					commsShims.NewLinkProperties(),
 					commsShims.GetRACE_BLOCKING())
+				return
 			}
-			logDebug(logPrefix, "accepted: ", conn)
+			logDebug(logPrefix, "accepted client for handle: ", acceptHandle, " on connection: ", connectionId)
+
+			// OBFS4 handshake
 			obfsConn, err := plugin.serverFactories[linkId].WrapConn(conn)
 			if err != nil {
-				logError("Handshake failed: ", err)
-				plugin.sdk.OnConnectionStatusChanged(handle,
+				logError("Handshake failed for handle ", acceptHandle, ": ", err)
+				plugin.sdk.OnConnectionStatusChanged(acceptHandle,
 					"",
 					commsShims.CONNECTION_CLOSED,
 					commsShims.NewLinkProperties(),
 					commsShims.GetRACE_BLOCKING())
+				return
 			}
 
 			// Add the connection to the Plugin's list of all active connections
 			plugin.connectionsMutex.Lock()
-			plugin.connections[newConnectionId] = &obfsConn
+			plugin.connections[connectionId] = &obfsConn
 			plugin.connectionsMutex.Unlock()
 
-			// Update the SDK about the connection being open
-			// Start a listener (in a new goroutine) if the Link Type allows receipt of messages
-			// if linkType == commsShims.LT_RECV || linkType == commsShims.LT_BIDI {
-			go plugin.connectionMonitor(&obfsConn, newConnectionId)
+			// Start monitor for receiving data
+			go plugin.connectionMonitor(&obfsConn, connectionId)
 
-			logDebug("Calling OnConnectionStatusChanged: ",
-				handle, " ",
-				newConnectionId, " ",
-				commsShims.CONNECTION_OPEN, " ",
-				linkProperties, " ",
-				commsShims.GetRACE_BLOCKING())
-			plugin.sdk.OnConnectionStatusChanged(handle, newConnectionId, commsShims.CONNECTION_OPEN, linkProperties, commsShims.GetRACE_BLOCKING())
-		}()
+			// Notify SDK - THIS specific handle's connection is now open
+			logDebug("Calling OnConnectionStatusChanged for handle: ", acceptHandle, " connection: ", connectionId)
+			plugin.sdk.OnConnectionStatusChanged(acceptHandle, connectionId, commsShims.CONNECTION_OPEN, linkProps, commsShims.GetRACE_BLOCKING())
+
+			// This goroutine exits - it's done its job for this one client
+			logDebug(logPrefix, "goroutine exiting after successful accept for handle: ", acceptHandle)
+		}(handle, newConnectionId, linkProperties) // Pass handle, connectionId, and linkProperties to goroutine
+
+		// Return immediately - the goroutine will handle the accept
 		return commsShims.PLUGIN_OK
 	}
 
 	// Start a listener (in a new goroutine) if the Link Type allows receipt of messages
 	// if linkType == commsShims.LT_RECV || linkType == commsShims.LT_BIDI {
-		go plugin.connectionMonitor(&obfsConn, newConnectionId)
+	go plugin.connectionMonitor(&obfsConn, newConnectionId)
 	// }
 
 	logDebug("Calling OnConnectionStatusChanged: ",
@@ -520,12 +528,10 @@ func (plugin *RacebirdPlugin) CloseConnection(handle uint64, connectionId string
 		plugin.linkConnectionCount[linkId] -= 1
 		logDebug(logPrefix, "count of remaining connections on link: ", plugin.linkConnectionCount[linkId])
 		(*connection).Close()
-		// If the last connection on a created link is closed, close the listener socket as well
-		if plugin.linkConnectionCount[linkIdFromConnectionId(connectionId)] == 0 && plugin.listenerSockets[linkId] != nil {
-			logDebug(logPrefix, "Last open connection, closing listen socket")
-			(*plugin.listenerSockets[linkId]).Close()
-			delete(plugin.listenerSockets, linkId)
-		}
+
+		// NOTE: We do NOT close the listener socket when connections close.
+		// For TCP accept/listen semantics, the listener must stay open to accept new connections.
+		// The listener socket is only closed when DestroyLink is called.
 
 		// Update the SDK that the connection has been closed
 		plugin.sdk.OnConnectionStatusChanged(handle, connectionId, commsShims.CONNECTION_CLOSED, plugin.linkProperties[linkId], commsShims.GetRACE_BLOCKING())
@@ -550,6 +556,15 @@ func (plugin *RacebirdPlugin) DestroyLink(handle uint64, linkId string) commsShi
 		logError(logPrefix, "refusing to destroy link with remaining connections (should call closeConnection first)")
 		return commsShims.PLUGIN_ERROR
 	}
+
+	// Close the listener socket if it exists for this link
+	plugin.connectionsMutex.Lock()
+	if listener, ok := plugin.listenerSockets[linkId]; ok {
+		logDebug(logPrefix, "closing listener socket for link")
+		(*listener).Close()
+		delete(plugin.listenerSockets, linkId)
+	}
+	plugin.connectionsMutex.Unlock()
 
 	plugin.sdk.OnLinkStatusChanged(handle, linkId, commsShims.LINK_DESTROYED, plugin.linkProperties[linkId], commsShims.GetRACE_BLOCKING())
 	delete(plugin.linkAddresses, linkId)
