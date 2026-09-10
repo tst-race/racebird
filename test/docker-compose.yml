@@ -1,9 +1,10 @@
 services:
   rbserver:
-    image: ghcr.io/tst-race/raceboat/raceboat-runtime:main
+    image: ghcr.io/tst-race/raceboat/raceboat-runtime:latest
     container_name: rbserver
     volumes:
       - ./kits:/server-kits
+      - ./server-logs:/tmp
     networks:
       racebird-network:
         ipv4_address: 10.18.1.3
@@ -21,12 +22,13 @@ services:
       --param PluginRacebird.iat-mode="0"
 
   rbclient:
-    image: ghcr.io/tst-race/raceboat/raceboat-runtime:main
+    image: ghcr.io/tst-race/raceboat/raceboat-runtime:latest
     container_name: rbclient
     depends_on:
       - rbserver
     volumes:
       - ./kits:/client-kits
+      - ./client-logs:/tmp
     networks:
       racebird-network:
         ipv4_address: 10.18.1.2
@@ -37,6 +39,26 @@ services:
       --recv-channel=obfs4
       --send-channel=obfs4
       --param hostname="10.18.1.2"
+      --send-address="{\"addr\":\"10.18.1.3:8675\",\"cert\":\"lbMRkflZ12CJg98lGmzI6fiYtP9ycAfB5yIdTK1b6tsVLV3MLjJQQ+qz8zz4g/DUrp+KUQ\",\"iat\":\"0\"}"
+
+  rbclient2:
+    image: ghcr.io/tst-race/raceboat/raceboat-runtime:latest
+    container_name: rbclient2
+    depends_on:
+      - rbserver
+    volumes:
+      - ./kits:/client-kits
+      - ./client2-logs:/tmp
+    networks:
+      racebird-network:
+        ipv4_address: 10.18.1.4
+    command: >
+      race-cli -m --client-connect --debug
+      --logto /tmp/raceboat_client.log
+      --dir /client-kits
+      --recv-channel=obfs4
+      --send-channel=obfs4
+      --param hostname="10.18.1.4"
       --send-address="{\"addr\":\"10.18.1.3:8675\",\"cert\":\"lbMRkflZ12CJg98lGmzI6fiYtP9ycAfB5yIdTK1b6tsVLV3MLjJQQ+qz8zz4g/DUrp+KUQ\",\"iat\":\"0\"}"
 
 networks:

@@ -218,6 +218,11 @@ docker run --rm \
     -v "${FILEPATH}":/code \
     -w /code \
     --name "plugin_builder_golang_comms" \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp \
+    -e GOCACHE=/tmp/go-cache \
+    -e GOPATH=/tmp/go \
+    -e GOMODCACHE=/tmp/go-mod \
     ${DOCKER_ARGS} \
     "${RACE_COMPILE_IMAGE}" \
     "${COMMAND}" ${BUILD_ARGS} "$@"

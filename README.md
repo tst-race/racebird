@@ -12,30 +12,31 @@ Racebird uses a docker-based build to build the plugin:
 
 ## Testing
 
-Racebird has a simple dockerized interactive integration test using racebird to connect a netcat client and server.
+Racebird has an automated dockerized integration test that validates bidirectional message delivery through the raceboat channel.
 
-(Ensure the plugin has been built, as above)
+### Automated Integration Test via Raceboat Repository
 
+Use the build-test orchestrator from the raceboat repository:
 
-This test will use three terminals, one to run the docker containers, one to run the netcat server, and one to run the netcat client.
+```bash
+# Navigate to raceboat/test/integration directory
+# Test with existing builds (fastest)
+python3 build-test.py --plugin-dir ../../racebird
 
-### Terminal 1: Docker:
-```
-cd scripts
-./setup.sh
-docker-compose up
-```
+# Rebuild plugin and test
+python3 build-test.py --plugin-dir ../../racebird --rebuild-plugin
 
-### Terminal 2: Netcat Server:
-```
-cd scripts
-./server.sh
-```
+# Full rebuild (raceboat + plugin)
+python3 build-test.py --plugin-dir ../../racebird --rebuild-all
 
-### Terminal 3: Netcat Client:
-```
-cd scripts
-./client.sh
+# See all options
+python3 build-test.py --help
 ```
 
-The server terminal should now contain "hello", sent by the raceboat client. Now either the client or server terminal can be typed in, and the message should appear on the other side.
+The test automatically:
+1. Copies plugin artifacts to test directories
+2. Starts docker containers with raceboat in client and server modes
+3. Sends test messages bidirectionally through the raceboat channel
+4. Validates successful delivery and reports results
+
+See `raceboat/test/integration/BUILD_TEST_GUIDE.md` for detailed documentation.
