@@ -127,6 +127,9 @@ if [ -n "${VERBOSE}" ] ; then
     set -x
 fi
 
+# Disable Go VCS stamping so builds do not require repository metadata in the container.
+export GOFLAGS="${GOFLAGS:+${GOFLAGS} }-buildvcs=false"
+
 ###
 # Main Execution
 ###
