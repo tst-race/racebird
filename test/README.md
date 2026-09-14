@@ -1,52 +1,34 @@
 # Racebird Integration Testing
 
-This directory contains the integration test configuration for the Racebird plugin.
+Racebird's integration test config now lives centrally under
+`raceboat/test/integration/` (scenario JSON + generated docker-compose files),
+not in this directory. This directory only holds `adapter.py`, racebird's
+plugin-owned test config generator (obfs4 node-id/cert generation and its
+cross-node cert-sharing requirement) - see `raceboat/test/integration/README.md`
+and `adapter_types.py` for the adapter contract.
 
 ## Quick Start
 
-Run the automated integration test using the build-test orchestrator from the raceboat repository:
-
 ```bash
-# From this directory
 cd ../../raceboat/test/integration
 
-# Test with existing builds (fastest)
-python3 build-test.py --plugin-dir ../../racebird
-
-# Rebuild plugin and test (common during development)
+# Build the plugin and run its default scenario (racebird-client-connect)
 python3 build-test.py --plugin-dir ../../racebird --rebuild-plugin
 
-# Full rebuild (after pulling changes)
-python3 build-test.py --plugin-dir ../../racebird --rebuild-all
+# Run a specific scenario directly (after building)
+python3 run_scenario.py --scenario-id racebird-client-connect
 ```
 
 ## Files in this Directory
 
-- **`setup.py`** - Copies built plugin artifacts to `kits/` directory for testing
-- **`docker-compose.yml`** - Docker compose configuration for integration test
-- **`kits/`** - Plugin artifacts directory (populated by setup.py)
-- **`*-logs/`** - Log directories for test containers
-- **`integration-test.py`** - Legacy wrapper script (use build-test.py instead)
+- **`adapter.py`** - Generates race-cli params/channel flags/kit path for
+  racebird, given a node's role (listener/connector) in a scenario. Called by
+  `raceboat/test/integration/generate_scenario.py`; never invoked directly.
 
-## How It Works
+## Scenarios
 
-1. The `build-test.py` orchestrator runs `setup.py` to copy plugin artifacts
-2. Docker containers are started using `docker-compose.yml`
-3. Test stubs validate bidirectional message delivery through raceboat
-4. Results are reported with clear pass/fail status
+See `raceboat/test/integration/scenarios/racebird-client-connect.json` for the
+current scenario definition (topology, IPs, mode). Generated compose files,
+merged kits, and per-node logs are written to
+`raceboat/test/integration/generated/<scenario-id>/` each run.
 
-## Test Configuration
-
-The `docker-compose.yml` file configures:
-- **rbserver** - raceboat in `--server-connect` mode
-- **rbclient** - raceboat in `--client-connect` mode
-- Network configuration for plugin communication
-- Plugin-specific parameters (node-id, private-key, etc.)
-
-## Detailed Documentation
-
-See `raceboat/test/integration/BUILD_TEST_GUIDE.md` for:
-- Complete usage examples
-- Rebuild workflow options
-- Troubleshooting guide
-- CI/CD integration examples
