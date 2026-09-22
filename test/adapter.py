@@ -19,6 +19,12 @@ from adapter_types import NodeContribution, NodeRequest  # noqa: E402
 CHANNEL_NAME = "obfs4"
 LINK_PORT = 8675
 
+# A bootstrap scenario may use racebird for both the "initial" and "final"
+# slots on the same node; each needs its own listening port so the two
+# links don't collide. "channel" (plain client-connect) keeps the original
+# port for backward compatibility.
+SLOT_PORTS = {"channel": LINK_PORT, "initial": LINK_PORT, "final": LINK_PORT + 1}
+
 # TODO(Further Considerations #1 in plan.md): static, known-good obfs4
 # node-id/keypair/drbg-seed/cert fixture (matches the values previously
 # hand-pasted into racebird/test/docker-compose.yml). Replace with a real
@@ -74,8 +80,9 @@ def generate_node_contribution(request: NodeRequest) -> NodeContribution:
     )
 
     if request.role == "listener":
+        port = SLOT_PORTS.get(request.slot, LINK_PORT)
         contribution.address_output = {
-            "addr": f"{request.ip}:{LINK_PORT}",
+            "addr": f"{request.ip}:{port}",
             "cert": _FIXTURE["cert"],
             "iat": _FIXTURE["iat-mode"],
         }

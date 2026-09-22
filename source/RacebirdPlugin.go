@@ -409,6 +409,19 @@ func (plugin *RacebirdPlugin) OpenConnection(handle uint64, linkType commsShims.
 		dialFn := net.Dial
 		logDebug(logPrefix, "dialing with: ", tcpAddr, dialFn)
 		obfsConn, err = factory.Dial("tcp", tcpAddr, dialFn, obfs4Args)
+		if err != nil {
+			// Without this check, a failed Dial (e.g. server listener not
+			// ready yet) left obfsConn nil and connectionMonitor would
+			// panic on a nil net.Conn.
+			logError(logPrefix, "failed to dial obfs4 connection to ", tcpAddr, ": ", err)
+			plugin.linkConnectionCount[linkId] -= 1
+			plugin.sdk.OnConnectionStatusChanged(handle,
+				"",
+				commsShims.CONNECTION_CLOSED,
+				commsShims.NewLinkProperties(),
+				commsShims.GetRACE_BLOCKING())
+			return commsShims.PLUGIN_ERROR
+		}
 
 		// Add the connection to the Plugin's list of all active connections
 		plugin.connectionsMutex.Lock()
