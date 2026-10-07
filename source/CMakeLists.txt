@@ -41,12 +41,22 @@ if(TARGET commsPluginBindingsGolang)
     set(COMMS_PLUGIN_BINDINGS_GOLANG_GOPATH ${COMMS_PLUGIN_BINDINGS_GOLANG_BINARY_DIR}/include)
 endif()
 
+# /go doesn't exist and isn't writable by a non-root build user; prefer an
+# explicit GOPATH from the environment, else derive a writable one from HOME.
+if(DEFINED ENV{GOPATH})
+    set(GOPATH_PRIMARY "$ENV{GOPATH}")
+elseif(DEFINED ENV{HOME})
+    set(GOPATH_PRIMARY "$ENV{HOME}/go")
+else()
+    set(GOPATH_PRIMARY "/go")
+endif()
+
 if(ANDROID)
     # Setup common GOENV variables
     list(APPEND GOENV
         CC=${ANDROID_TOOLCHAIN_ROOT}/bin/${CMAKE_LIBRARY_ARCHITECTURE}${ANDROID_PLATFORM}-clang
         CXX=${ANDROID_TOOLCHAIN_ROOT}/bin/${CMAKE_LIBRARY_ARCHITECTURE}${ANDROID_PLATFORM}-clang++
-        GOPATH=/go:/android/x86_64/go:${COMMS_PLUGIN_BINDINGS_GOLANG_GOPATH}
+        GOPATH=${GOPATH_PRIMARY}:/android/x86_64/go:${COMMS_PLUGIN_BINDINGS_GOLANG_GOPATH}
         GOOS=android
         CGO_ENABLED=1
     )
@@ -55,21 +65,21 @@ if(ANDROID)
         list(APPEND CGO_CXXFLAGS "-I/android/x86_64/include")
         list(APPEND CGO_LDFLAGS "-L/android/x86_64/lib")
         list(APPEND GOENV
-            GOPATH=/android/x86_64/go:${COMMS_PLUGIN_BINDINGS_GOLANG_GOPATH}
+            GOPATH=${GOPATH_PRIMARY}:/android/x86_64/go:${COMMS_PLUGIN_BINDINGS_GOLANG_GOPATH}
             GOARCH=amd64
         )
     else()
         list(APPEND CGO_CXXFLAGS "-I/android/arm64-v8a/include")
         list(APPEND CGO_LDFLAGS "-L/android/arm64-v8a/lib")
         list(APPEND GOENV
-            GOPATH=/android/arm64-v8a/go:${COMMS_PLUGIN_BINDINGS_GOLANG_GOPATH}
+            GOPATH=${GOPATH_PRIMARY}:/android/arm64-v8a/go:${COMMS_PLUGIN_BINDINGS_GOLANG_GOPATH}
             GOARCH=arm64
         )
     endif()
 
 else()
     list(APPEND CGO_LDFLAGS "-L/usr/local/lib")
-    list(APPEND GOENV GOPATH=/go:/usr/local/go:/usr/local/go/src/shims/:${COMMS_PLUGIN_BINDINGS_GOLANG_GOPATH})
+    list(APPEND GOENV GOPATH=${GOPATH_PRIMARY}:/usr/local/go:/usr/local/go/src/shims/:${COMMS_PLUGIN_BINDINGS_GOLANG_GOPATH})
     if ("${TARGET_ARCHITECTURE}" STREQUAL "LINUX_arm64-v8a")
         list(APPEND CGO_CXXFLAGS "-I/linux/arm64-v8a/include")
         list(APPEND CGO_CXXFLAGS "-I/linux/arm64-v8a/include/race/common")
